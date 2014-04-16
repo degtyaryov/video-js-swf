@@ -268,6 +268,9 @@ package{
                 case "bytesTotal":
                     return _app.model.bytesTotal;
                     break;
+                case "startOffsetTime":
+                    return _app.model.startOffsetTime;
+                    break;
                 case "videoWidth":
                     return _app.model.videoWidth;
                     break;
