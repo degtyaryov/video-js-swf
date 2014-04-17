@@ -62,7 +62,6 @@ package{
             _ctxMenu.hideBuiltInItems();
             _ctxMenu.customItems.push(_ctxVersion, _ctxAbout);
             this.contextMenu = _ctxMenu;
-
         }
         
         private function registerExternalMethods():void{
@@ -93,10 +92,7 @@ package{
             }
             finally{}
             
-            
-            
             setTimeout(finish, 50);
-
         }
         
         private function finish():void{

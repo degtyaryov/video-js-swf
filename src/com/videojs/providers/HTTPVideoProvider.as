@@ -1,9 +1,11 @@
 package com.videojs.providers{
     
     import com.videojs.VideoJSModel;
+    import com.videojs.events.VideoErrorEvent;
     import com.videojs.events.VideoPlaybackEvent;
     import com.videojs.structs.ExternalErrorEventName;
     import com.videojs.structs.ExternalEventName;
+    
     import flash.events.EventDispatcher;
     import flash.events.NetStatusEvent;
     import flash.events.TimerEvent;
@@ -98,8 +100,14 @@ package com.videojs.providers{
         
         public function get duration():Number{
             if(_metadata != null && _metadata.duration != undefined){
-                return Number(_metadata.duration);
-            } else if( _durationOverride && _durationOverride > 0 ) {
+                if(!_src.pseudoStreamStartParam || _startOffset == 0) {
+                    return Number(_metadata.duration);
+                }
+                else{
+                    return _startOffset + Number(_metadata.duration); 
+                }
+            } 
+            else if( _durationOverride && _durationOverride > 0 ) {
                 return _durationOverride;
             }
             else{
@@ -196,15 +204,17 @@ package com.videojs.providers{
         }
         
         public function get bytesLoaded():int{
-            
             return 0;
         }
         
         public function get bytesTotal():int{
-            
             return 0;
         }
         
+        public function get startOffsetTime():Number{
+            return _startOffset;
+        }
+             
         public function get playing():Boolean{
             return _isPlaying;
         }
@@ -268,9 +278,9 @@ package com.videojs.providers{
             }
             // if the asset is already loading
             else{
-                if (_hasEnded) {
+                if(_hasEnded) {
                   _hasEnded = false;
-                  _ns.seek(0);
+                  seekBySeconds(0);
                 }
                 _pausePending = false;
                 _ns.resume();
@@ -290,9 +300,9 @@ package com.videojs.providers{
                 if(_isBuffering){
                     _pausePending = true;
                 }
-            } else if (_hasEnded) {
+            } else if(_hasEnded) {
               _hasEnded = false;
-              _ns.seek(0);
+              seekBySeconds(0);
             }
         }
         
@@ -308,10 +318,10 @@ package com.videojs.providers{
         private function getPseudoStreamSrc(pTime:Number):String{
             var src:String = _src.path;
             if(src.indexOf("?") > -1){
-                src += "&" + _src.pseudoStreamStartParam + "=" + pTime;
+                src += "&" + _src.pseudoStreamStartParam + "=" + int(pTime);
             }
             else{
-                src += "?" + _src.pseudoStreamStartParam + "=" + pTime;
+                src += "?" + _src.pseudoStreamStartParam + "=" + int(pTime);
             }
             return src;
         }
@@ -332,32 +342,45 @@ package com.videojs.providers{
                 _hasEnded = false;
             }
 
-            if(_src.path === null)
-            {
-                _startOffset = pTime;
-            }
+            if(!_src.pseudoStreamStartParam || (_src.pseudoStreamStartParam && (pTime > _startOffset && pTime <= buffered))){        
+                if(_src.path === null){
+                    _startOffset = pTime;
+                }
 
-            if(!_src.pseudoStreamStartParam || (pTime < _ns.bufferLength && _startOffset == 0 ) ){
-                _ns.seek(pTime);
-                _isBuffering = true;
+                _ns.seek(pTime - _startOffset);
             }
             else{
+                _startOffset = pTime;
                 _ns.play(getPseudoStreamSrc(pTime));
             }
+            
+            _isBuffering = true;
         }
         
         public function seekByPercent(pPercent:Number):void{
             if(_metadata.duration != undefined){
                 var pTime:Number;
+                
                 if(pPercent < 0){
                     pTime = 0;
                 }
                 else if(pPercent > 1){
-                    pTime = (pPercent / 100) * _metadata.duration;
+                    if(_src.pseudoStreamStartParam){
+                           pTime = (pPercent / 100) * (_metadata.duration + _startOffset);
+                    }
+                    else{
+                        pTime = (pPercent / 100) * _metadata.duration;
+                    }
                 }
                 else{
-                    pTime = pPercent * _metadata.duration;
+                    if(_src.pseudoStreamStartParam){
+                        pTime = pPercent * (_metadata.duration + _startOffset);
+                    }
+                    else{
+                        pTime = pPercent * _metadata.duration;
+                    }
                 }
+
                 seekBySeconds(pTime);
             }
         }

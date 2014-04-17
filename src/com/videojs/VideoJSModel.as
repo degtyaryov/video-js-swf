@@ -376,6 +376,18 @@ package com.videojs{
         }
         
         /**
+         * Return a video start time.
+         * @return 
+         * 
+         */
+        public function get startOffsetTime():Number{
+            if(_provider){
+                return _provider.startOffsetTime;
+            }
+            return 0;
+        }
+        
+        /**
          * Returns the pixel width of the currently playing video as interpreted by the decompressor.
          * @return 
          * 
@@ -419,7 +431,6 @@ package com.videojs{
 
         /**
          * Allows this model to act as a centralized event bus to which other classes can subscribe.
-         *  
          * @param e
          * 
          */        
@@ -549,14 +560,14 @@ package com.videojs{
                 return false;
             }
         }
-		
-		/**
-		 * Removes dangerous characters from a user-provided string that will be passed to ExternalInterface.call()
-		 * 
-		 */        
-		public function cleanEIString(pString:String):String{
-			return pString.replace(/[^A-Za-z0-9_.]/gi, "");
-		}
+        
+        /**
+         * Removes dangerous characters from a user-provided string that will be passed to ExternalInterface.call()
+         * 
+         */        
+        public function cleanEIString(pString:String):String{
+            return pString.replace(/[^A-Za-z0-9_.]/gi, "");
+        }
         
         private function initProvider():void {
             if(_provider){
