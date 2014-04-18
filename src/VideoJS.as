@@ -142,6 +142,10 @@ package{
               _app.model.pseudoStreamStartParam = String(loaderInfo.parameters.pseudoStreamStartParam);
             }
             
+            if(loaderInfo.parameters.pseudoStreamStartParamType != undefined && loaderInfo.parameters.pseudoStreamStartParamType != ""){
+                _app.model.pseudoStreamStartParamType = String(loaderInfo.parameters.pseudoStreamStartParamType);
+            }
+            
             if(loaderInfo.parameters.readyFunction != undefined){
                 try{
                     ExternalInterface.call(_app.model.cleanEIString(loaderInfo.parameters.readyFunction), ExternalInterface.objectID);

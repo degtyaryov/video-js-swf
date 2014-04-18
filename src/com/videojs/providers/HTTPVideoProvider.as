@@ -67,6 +67,12 @@ package com.videojs.providers{
         private var _loop:Boolean = false;
         private var _durationOverride:Number;
         
+        /**
+         * Original value of file size, is necessary for pseudo-streaming,
+         * for value transmission in bytes.
+         */
+        private var _originalSize:Number;
+        
         private var _model:VideoJSModel;
         
         public function HTTPVideoProvider(){
@@ -100,14 +106,14 @@ package com.videojs.providers{
         
         public function get duration():Number{
             if(_metadata != null && _metadata.duration != undefined){
-                if(!_src.pseudoStreamStartParam || _startOffset == 0) {
+                if(!_src.pseudoStreamStartParam || _startOffset == 0){
                     return Number(_metadata.duration);
                 }
                 else{
                     return _startOffset + Number(_metadata.duration); 
                 }
             } 
-            else if( _durationOverride && _durationOverride > 0 ) {
+            else if(_durationOverride && _durationOverride > 0){
                 return _durationOverride;
             }
             else{
@@ -252,6 +258,7 @@ package com.videojs.providers{
         
         public function init(pSrc:Object, pAutoplay:Boolean):void{
             _src = pSrc;
+            _originalSize = 0;
             _loadErrored = false;
             _loadStarted = false;
             _loadCompleted = false;
@@ -291,6 +298,7 @@ package com.videojs.providers{
             }
         }
         
+        // To pause video playback
         public function pause():void{
             _ns.pause();
 
@@ -306,6 +314,7 @@ package com.videojs.providers{
             }
         }
         
+        // To recover video playback
         public function resume():void{
             if(_isPlaying && _isPaused){
                 _ns.resume();
@@ -315,17 +324,40 @@ package com.videojs.providers{
             }
         }
 
+        // Formation of a line for pseudo-streaming
         private function getPseudoStreamSrc(pTime:Number):String{
             var src:String = _src.path;
-            if(src.indexOf("?") > -1){
-                src += "&" + _src.pseudoStreamStartParam + "=" + int(pTime);
+            src += (src.indexOf("?") > -1 ? "&" : "?") + _src.pseudoStreamStartParam + "=";
+            
+            switch(_src.pseudoStreamStartParamType){
+                // milicessond
+                case "1": 
+                    src += int(pTime) * 1000;
+                    break;
+                // bytes
+                case "2": 
+                    var percent:Number;
+                    percent = (pTime * 100) / duration;
+                    src += int((_originalSize / 100) * percent);
+                    break;
+                // second
+                default:
+                    src += int(pTime);
             }
-            else{
-                src += "?" + _src.pseudoStreamStartParam + "=" + int(pTime);
-            }
+            
+            /* TestData: 
+             * _model.broadcastErrorEventExternally( "type: " + _src.pseudoStreamStartParamType
+                                                    + ", pTime:" + pTime
+                                                    + ", duration:" + duration
+                                                    + ", _originalSize:" + _originalSize
+                                                    + ", percent:" + percent
+                                                    + ", sum:" + int((_originalSize / 100) * percent)
+                                                    );*/
+
             return src;
         }
         
+        // Transition according to video in seconds
         public function seekBySeconds(pTime:Number):void{
             if(_isPlaying)
             {
@@ -342,13 +374,17 @@ package com.videojs.providers{
                 _hasEnded = false;
             }
 
+            // Here we check that time where we pass there were more than that from where we began earlier, and less than that that we already buffered 
             if(!_src.pseudoStreamStartParam || (_src.pseudoStreamStartParam && (pTime > _startOffset && pTime <= buffered))){        
+                // if (_src.path === null) - we write the pTime as _startOffset
                 if(_src.path === null){
                     _startOffset = pTime;
                 }
 
+                // We transfer on the buffer considering _startOffset (start time)
                 _ns.seek(pTime - _startOffset);
             }
+            // If pseudo-streaming isn't used or we are out of the buffer - we boot from the right place
             else{
                 _startOffset = pTime;
                 _ns.play(getPseudoStreamSrc(pTime));
@@ -357,6 +393,7 @@ package com.videojs.providers{
             _isBuffering = true;
         }
         
+        // Transition according to video in percent
         public function seekByPercent(pPercent:Number):void{
             if(_metadata.duration != undefined){
                 var pTime:Number;
@@ -365,26 +402,17 @@ package com.videojs.providers{
                     pTime = 0;
                 }
                 else if(pPercent > 1){
-                    if(_src.pseudoStreamStartParam){
-                           pTime = (pPercent / 100) * (_metadata.duration + _startOffset);
-                    }
-                    else{
-                        pTime = (pPercent / 100) * _metadata.duration;
-                    }
+                    pTime = (pPercent / 100) * duration;
                 }
                 else{
-                    if(_src.pseudoStreamStartParam){
-                        pTime = pPercent * (_metadata.duration + _startOffset);
-                    }
-                    else{
-                        pTime = pPercent * _metadata.duration;
-                    }
+                    pTime = pPercent * duration;
                 }
 
                 seekBySeconds(pTime);
             }
         }
         
+        // To stop video playback
         public function stop():void{
             if(_isPlaying){
                 _ns.close();
@@ -529,6 +557,9 @@ package com.videojs.providers{
                     _throughputTimer.start();
                     _model.broadcastEventExternally(ExternalEventName.ON_LOAD_START);
                     _model.broadcastEventExternally(ExternalEventName.ON_BUFFER_EMPTY);
+                    if(!_originalSize){
+                        _originalSize = _ns.bytesTotal;
+                    }
                     if(_pauseOnStart && _loadStarted == false){
                         _ns.pause();
                         _isPaused = true;
@@ -636,7 +667,6 @@ package com.videojs.providers{
         }
         
         public function onMetaData(pMetaData:Object):void{
-
             _metadata = pMetaData;
             if(pMetaData.duration != undefined){
                 _isLive = false;
@@ -646,6 +676,7 @@ package com.videojs.providers{
             else{
                 _isLive = true;
                 _canSeekAhead = false;
+
             }
             _model.broadcastEvent(new VideoPlaybackEvent(VideoPlaybackEvent.ON_META_DATA, {metadata:_metadata}));
             _model.broadcastEventExternally(ExternalEventName.ON_METADATA, _metadata);
