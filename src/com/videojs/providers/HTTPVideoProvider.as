@@ -68,10 +68,11 @@ package com.videojs.providers{
         private var _durationOverride:Number;
         
         /**
-         * Original value of file size, is necessary for pseudo-streaming,
+         * Original value of file size and duration, is necessary for pseudo-streaming,
          * for value transmission in bytes.
          */
         private var _originalSize:Number;
+        private var _originalDuration:Number;
         
         private var _model:VideoJSModel;
         
@@ -105,7 +106,7 @@ package com.videojs.providers{
         }
         
         public function get duration():Number{
-            if(_metadata != null && _metadata.duration != undefined){
+            if(_metadata != null && _metadata.duration != undefined && _metadata.duration != 0){
                 if(!_src.pseudoStreamStartParam || _startOffset == 0){
                     return Number(_metadata.duration);
                 }
@@ -115,6 +116,9 @@ package com.videojs.providers{
             } 
             else if(_durationOverride && _durationOverride > 0){
                 return _durationOverride;
+            }
+            else if(_originalDuration > 0){
+                return _originalDuration;
             }
             else{
                 return 0;
@@ -259,6 +263,7 @@ package com.videojs.providers{
         public function init(pSrc:Object, pAutoplay:Boolean):void{
             _src = pSrc;
             _originalSize = 0;
+			_originalDuration = 0;
             _loadErrored = false;
             _loadStarted = false;
             _loadCompleted = false;
@@ -330,29 +335,20 @@ package com.videojs.providers{
             src += (src.indexOf("?") > -1 ? "&" : "?") + _src.pseudoStreamStartParam + "=";
             
             switch(_src.pseudoStreamStartParamType){
-                // milicessond
-                case "1": 
+                // milliseconds
+                case "milliseconds": 
                     src += int(pTime) * 1000;
                     break;
                 // bytes
-                case "2": 
+                case "bytes": 
                     var percent:Number;
                     percent = (pTime * 100) / duration;
                     src += int((_originalSize / 100) * percent);
                     break;
-                // second
+                // seconds
                 default:
                     src += int(pTime);
             }
-            
-            /* TestData: 
-             * _model.broadcastErrorEventExternally( "type: " + _src.pseudoStreamStartParamType
-                                                    + ", pTime:" + pTime
-                                                    + ", duration:" + duration
-                                                    + ", _originalSize:" + _originalSize
-                                                    + ", percent:" + percent
-                                                    + ", sum:" + int((_originalSize / 100) * percent)
-                                                    );*/
 
             return src;
         }
@@ -384,7 +380,7 @@ package com.videojs.providers{
                 // We transfer on the buffer considering _startOffset (start time)
                 _ns.seek(pTime - _startOffset);
             }
-            // If pseudo-streaming isn't used or we are out of the buffer - we boot from the right place
+            // If pseudo-streaming is used or we are out of the buffer - we boot from the right place
             else{
                 _startOffset = pTime;
                 _ns.play(getPseudoStreamSrc(pTime));
@@ -668,15 +664,18 @@ package com.videojs.providers{
         
         public function onMetaData(pMetaData:Object):void{
             _metadata = pMetaData;
-            if(pMetaData.duration != undefined){
+            if(_metadata.duration != undefined){
                 _isLive = false;
                 _canSeekAhead = true;
+                if (!_originalDuration){
+                    _originalDuration = _metadata.duration;
+                }
                 _model.broadcastEventExternally(ExternalEventName.ON_DURATION_CHANGE, _metadata.duration);
             }
             else{
                 _isLive = true;
                 _canSeekAhead = false;
-
+                _originalDuration = 0;
             }
             _model.broadcastEvent(new VideoPlaybackEvent(VideoPlaybackEvent.ON_META_DATA, {metadata:_metadata}));
             _model.broadcastEventExternally(ExternalEventName.ON_METADATA, _metadata);
