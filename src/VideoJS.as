@@ -336,6 +336,12 @@ package{
                 case "rtmpStream":
                     _app.model.rtmpStream = String(pValue);
                     break;
+                case "pseudoStreamStartParam":
+                    _app.model.pseudoStreamStartParam = String(pValue);
+                    break;
+                case "pseudoStreamStartParamType":
+                    _app.model.pseudoStreamStartParamType = String(pValue);
+                    break;
                 default:
                     _app.model.broadcastErrorEventExternally(ExternalErrorEventName.PROPERTY_NOT_FOUND, pPropertyName);
                     break;

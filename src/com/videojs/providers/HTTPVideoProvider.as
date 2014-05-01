@@ -263,7 +263,7 @@ package com.videojs.providers{
         public function init(pSrc:Object, pAutoplay:Boolean):void{
             _src = pSrc;
             _originalSize = 0;
-			_originalDuration = 0;
+            _originalDuration = 0;
             _loadErrored = false;
             _loadStarted = false;
             _loadCompleted = false;
