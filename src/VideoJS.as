@@ -62,7 +62,6 @@ package{
             _ctxMenu.hideBuiltInItems();
             _ctxMenu.customItems.push(_ctxVersion, _ctxAbout);
             this.contextMenu = _ctxMenu;
-
         }
         
         private function registerExternalMethods():void{
@@ -95,10 +94,7 @@ package{
             }
             finally{}
             
-            
-            
             setTimeout(finish, 50);
-
         }
         
         private function finish():void{
@@ -142,6 +138,14 @@ package{
               if(loaderInfo.parameters.rtmpStream != undefined && loaderInfo.parameters.rtmpStream != ""){
                 _app.model.rtmpStream = loaderInfo.parameters.rtmpStream;
               }
+            }
+
+            if(loaderInfo.parameters.pseudoStreamStartParam != undefined && loaderInfo.parameters.pseudoStreamStartParam != ""){
+              _app.model.pseudoStreamStartParam = String(loaderInfo.parameters.pseudoStreamStartParam);
+            }
+            
+            if(loaderInfo.parameters.pseudoStreamStartParamType != undefined && loaderInfo.parameters.pseudoStreamStartParamType != ""){
+                _app.model.pseudoStreamStartParamType = String(loaderInfo.parameters.pseudoStreamStartParamType);
             }
             
             if(loaderInfo.parameters.readyFunction != undefined){
@@ -270,6 +274,9 @@ package{
                 case "bytesTotal":
                     return _app.model.bytesTotal;
                     break;
+                case "startOffsetTime":
+                    return _app.model.startOffsetTime;
+                    break;
                 case "videoWidth":
                     return _app.model.videoWidth;
                     break;
@@ -336,6 +343,12 @@ package{
                     break;
                 case "rtmpStream":
                     _app.model.rtmpStream = String(pValue);
+                    break;
+                case "pseudoStreamStartParam":
+                    _app.model.pseudoStreamStartParam = String(pValue);
+                    break;
+                case "pseudoStreamStartParamType":
+                    _app.model.pseudoStreamStartParamType = String(pValue);
                     break;
                 default:
                     _app.model.broadcastErrorEventExternally(ExternalErrorEventName.PROPERTY_NOT_FOUND, pPropertyName);
