@@ -1,11 +1,9 @@
 package com.videojs.providers{
 
     import com.videojs.VideoJSModel;
-    import com.videojs.events.VideoErrorEvent;
     import com.videojs.events.VideoPlaybackEvent;
     import com.videojs.structs.ExternalErrorEventName;
     import com.videojs.structs.ExternalEventName;
-    
     import flash.events.EventDispatcher;
     import flash.events.NetStatusEvent;
     import flash.events.TimerEvent;
@@ -75,6 +73,7 @@ package com.videojs.providers{
          */
         private var _originalSize:Number;
         private var _originalDuration:Number;
+        private var _metaKeyFrames:Object;
         
         private var _model:VideoJSModel;
         
@@ -109,7 +108,7 @@ package com.videojs.providers{
         
         public function get duration():Number{
             if(_metadata != null && _metadata.duration != undefined && _metadata.duration != 0){
-                if(!_src.pseudoStreamStartParam || _startOffset == 0){
+                if(!_src.pseudoStreamStartParam){
                     return Number(_metadata.duration);
                 }
                 else{
@@ -345,26 +344,17 @@ package com.videojs.providers{
         private function getPseudoStreamSrc(pTime:Number):String{
             var src:String = _src.path;
             src += (src.indexOf("?") > -1 ? "&" : "?") + _src.pseudoStreamStartParam + "=";
-            
-            switch(_src.pseudoStreamStartParamType){
-                // milliseconds
-                case "milliseconds": 
-                    src += int(pTime) * 1000;
+
+            for (var i=0; i< _metaKeyFrames.times.length; i++) {
+                if ((_metaKeyFrames.times[i] <= pTime) && (_metaKeyFrames.times[i+1] >= pTime)) {
+                    src += _metaKeyFrames.filepositions[i];
                     break;
-                // bytes
-                case "bytes": 
-                    var percent:Number;
-                    percent = (pTime * 100) / duration;
-                    src += int((_originalSize / 100) * percent);
-                    break;
-                // seconds
-                default:
-                    src += int(pTime);
+                }
             }
 
             return src;
         }
-        
+
         // Transition according to video in seconds
         public function seekBySeconds(pTime:Number):void{
             if(_isPlaying)
@@ -389,7 +379,7 @@ package com.videojs.providers{
                 // if (_src.path === null) - we write the pTime as _startOffset
                 if(_src.path === null){
                     _startOffset = pTime;
-                return;
+		    return;
                 }
 
                 // We transfer on the buffer considering _startOffset (start time)
@@ -400,29 +390,30 @@ package com.videojs.providers{
                 _startOffset = pTime;
                 _ns.play(getPseudoStreamSrc(pTime));
             }
-            
-            _isBuffering = true;
         }
-        
+
         // Transition according to video in percent
         public function seekByPercent(pPercent:Number):void{
-            if(_metadata.duration != undefined){
+            if(_isPlaying && _metadata.duration != undefined){
+	        _isSeeking = true;
                 var pTime:Number;
-                
+
                 if(pPercent < 0){
                     pTime = 0;
                 }
                 else if(pPercent > 1){
-                    pTime = (pPercent / 100) * duration;
+		    _throughputTimer.stop();
+                    pTime = ( (pPercent / 100) * duration );
                 }
                 else{
+		    _throughputTimer.stop();
                     pTime = pPercent * duration;
                 }
 
                 seekBySeconds(pTime);
             }
         }
-        
+
         // To stop video playback
         public function stop():void{
             if(_isPlaying){
@@ -434,7 +425,7 @@ package com.videojs.providers{
                 _throughputTimer.reset();
             }
         }
-        
+
         public function attachVideo(pVideo:Video):void{
             _videoReference = pVideo;
         }
@@ -470,7 +461,7 @@ package com.videojs.providers{
                 _throughputTimer.reset();
             }
         }
-        
+
         private function initNetConnection():void{
             // the video element triggers loadstart as soon as the resource selection algorithm selects a source
             // this is somewhat later than that moment but relatively close
@@ -492,7 +483,7 @@ package com.videojs.providers{
             _nc.addEventListener(NetStatusEvent.NET_STATUS, onNetConnectionStatus);
             _nc.connect(null);
         }
-        
+
         private function initNetStream():void{
             if(_ns != null){
                 _ns.close();
@@ -511,10 +502,10 @@ package com.videojs.providers{
             if (_src.path === null) {
               _pausePending = true;
             }
-            
+
             _model.broadcastEvent(new VideoPlaybackEvent(VideoPlaybackEvent.ON_STREAM_READY, {ns:_ns}));
         }
-        
+
         private function calculateThroughput():void{
           // If there is no NetStream, the rest of the calculation is moot.
           if(_ns){
@@ -543,7 +534,7 @@ package com.videojs.providers{
               }
           }
         }
-        
+
         private function onNetConnectionStatus(e:NetStatusEvent):void{
             switch(e.info.code){
                 case "NetConnection.Connect.Success":
@@ -569,11 +560,12 @@ package com.videojs.providers{
                     _throughputTimer.reset();
                     _throughputTimer.start();
 
-                    if(!_pauseOnStart || _model.autoplay){
-                        _ns.resume();
                     if(!_originalSize){
                         _originalSize = _ns.bytesTotal;
                     }
+
+                    if(!_pauseOnStart || _model.autoplay){
+                        _ns.resume();
                         _model.broadcastEventExternally(ExternalEventName.ON_RESUME);
                         _model.broadcastEvent(new VideoPlaybackEvent(VideoPlaybackEvent.ON_STREAM_START, {info:e.info}));
                     }
@@ -585,7 +577,7 @@ package com.videojs.providers{
                     }
                     _model.broadcastEventExternally(ExternalEventName.ON_SEEK_START);
                     break;
-                
+
                 case "NetStream.Buffer.Full":
                     _model.broadcastEventExternally(ExternalEventName.ON_CAN_PLAY);
                     _pausedSeekValue = -1;
@@ -599,7 +591,7 @@ package com.videojs.providers{
                     }
                     _isBuffering = false;
                     break;
-                
+
                 case "NetStream.Buffer.Empty":
                     // should not fire if ended/paused. issue #38
                     if(!_isPlaying){ return; }
@@ -623,7 +615,7 @@ package com.videojs.providers{
                     _isBuffering = true;
                     _model.broadcastEventExternally(ExternalEventName.ON_BUFFER_EMPTY);
                     break;
-                
+
                 case "NetStream.Play.Stop":
                     if(!_loop){
                         _isPlaying = false;
@@ -679,6 +671,7 @@ package com.videojs.providers{
               return;
             }
             _metadata = pMetaData;
+
             if(_metadata.duration != undefined){
                 _isLive = false;
                 _canSeekAhead = true;
@@ -692,6 +685,20 @@ package com.videojs.providers{
                 _canSeekAhead = false;
                 _originalDuration = 0;
             }
+
+            if (_metadata.seekpoints != undefined) {
+                _metaKeyFrames = new Object();
+                _metaKeyFrames.times = new Array();
+                _metaKeyFrames.filepositions = new Array();
+                for (var j in _metadata.seekpoints) {
+                    _metaKeyFrames.times.push(Number(_metadata.seekpoints[j]['time']));
+                    _metaKeyFrames.filepositions.push(Number(_metadata.seekpoints[j]['time']));
+                }
+            }
+            else {
+                _metaKeyFrames = _metadata.keyframes;
+            }
+
             _model.broadcastEvent(new VideoPlaybackEvent(VideoPlaybackEvent.ON_META_DATA, {metadata:_metadata}));
             _model.broadcastEventExternally(ExternalEventName.ON_METADATA, _metadata);
 
