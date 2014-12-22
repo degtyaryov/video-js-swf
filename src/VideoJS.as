@@ -144,10 +144,6 @@ package{
               _app.model.pseudoStreamStartParam = String(loaderInfo.parameters.pseudoStreamStartParam);
             }
             
-            if(loaderInfo.parameters.pseudoStreamStartParamType != undefined && loaderInfo.parameters.pseudoStreamStartParamType != ""){
-                _app.model.pseudoStreamStartParamType = String(loaderInfo.parameters.pseudoStreamStartParamType);
-            }
-            
             if(loaderInfo.parameters.readyFunction != undefined){
                 try{
                     ExternalInterface.call(_app.model.cleanEIString(loaderInfo.parameters.readyFunction), ExternalInterface.objectID);
@@ -346,9 +342,6 @@ package{
                     break;
                 case "pseudoStreamStartParam":
                     _app.model.pseudoStreamStartParam = String(pValue);
-                    break;
-                case "pseudoStreamStartParamType":
-                    _app.model.pseudoStreamStartParamType = String(pValue);
                     break;
                 default:
                     _app.model.broadcastErrorEventExternally(ExternalErrorEventName.PROPERTY_NOT_FOUND, pPropertyName);
