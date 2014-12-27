@@ -376,9 +376,20 @@ package com.videojs.providers{
                 _ns.seek(pTime - _startOffsetPseudoStream);
             }
             // If pseudo-streaming is used or we are out of the buffer - we boot from the right place
-            else{
-                _isSeekingPseudoStream = true;
-                _ns.play(getPseudoStreamSrc(pTime));
+            else {
+                if (_metaKeyFrames == undefined) {
+                    _isPlaying = true;
+                    _isSeeking = false;
+                    _model.broadcastEventExternally(ExternalEventName.ON_SEEK_NOT_SUPPORT);
+                    _currentThroughput = 0;
+                    _loadStartTimestamp = getTimer();
+                    _throughputTimer.reset();
+                    _throughputTimer.start();
+                }
+                else {
+                    _isSeekingPseudoStream = true;
+                    _ns.play(getPseudoStreamSrc(pTime));
+                }
             }
         }
 
