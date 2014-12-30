@@ -42,6 +42,7 @@ package com.videojs{
         private var _src:String = "";
         private var _rtmpConnectionURL:String = "";
         private var _rtmpStream:String = "";
+        private var _pseudoStreamStartParam:String = "";
         private var _poster:String = "";
 
         private static var _instance:VideoJSModel;
@@ -243,6 +244,13 @@ package com.videojs{
             }
         }
 
+        public function get pseudoStreamStartParam():String{
+            return _pseudoStreamStartParam;
+        }
+        public function set pseudoStreamStartParam(pValue:String):void {
+            _pseudoStreamStartParam = pValue;
+        }
+        
         /**
          * This is used to distinguish a _src that's being set from incoming flashvars,
          * and mirrors the normal setter WITHOUT dispatching the 'onsrcchange' event.
@@ -371,6 +379,18 @@ package com.videojs{
             return 0;
         }
 
+        /**
+         * Return a video start time.
+         * @return 
+         * 
+         */
+        public function get startOffsetTime():Number{
+            if(_provider){
+                return _provider.startOffsetTime;
+            }
+            return 0;
+        }
+        
         /**
          * Returns the pixel width of the currently playing video as interpreted by the decompressor.
          * @return
@@ -595,7 +615,8 @@ package com.videojs{
 
                     if(_currentPlaybackType == PlaybackType.HTTP){
                         __src = {
-                            path: _src
+                            path: _src,
+                            pseudoStreamStartParam: _pseudoStreamStartParam
                         };
                         _provider = new HTTPVideoProvider();
                         _provider.attachVideo(_videoReference);
@@ -612,6 +633,7 @@ package com.videojs{
                     }
 
                     break;
+                
                 case PlayerMode.AUDIO:
                     __src = {
                         path:_src
@@ -619,6 +641,7 @@ package com.videojs{
                     _provider = new HTTPAudioProvider();
                     _provider.init(__src, _autoplay);
                     break;
+                
                 default:
                     broadcastEventExternally(ExternalErrorEventName.UNSUPPORTED_MODE);
             }

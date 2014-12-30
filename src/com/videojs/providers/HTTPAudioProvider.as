@@ -17,7 +17,6 @@ package com.videojs.providers{
     import flash.utils.Timer;
     import flash.utils.getTimer;
     
-    
     public class HTTPAudioProvider implements IProvider{
         
         private var _throughputTimer:Timer;
@@ -33,7 +32,7 @@ package com.videojs.providers{
         private var _preloadInitiated:Boolean = false;
         
         private var _sound:Sound;
-		private var _soundChannel:SoundChannel;
+        private var _soundChannel:SoundChannel;
         private var _audioPlaybackStarted:Boolean = false;
         private var _audioPlaybackStopped:Boolean = false;
         private var _audioPlaybackPaused:Boolean = false;
@@ -140,6 +139,10 @@ package com.videojs.providers{
         
         public function get bytesTotal():int{
             return _audioBytesTotal;
+        }
+        
+        public function get startOffsetTime():Number{
+            return 0;
         }
         
         public function get playing():Boolean{
@@ -420,7 +423,7 @@ package com.videojs.providers{
             _throughputTimer.reset();
             doLoadCalculations();
         }
-		
+        
         private function onSoundPlayComplete(e:Event):void{
             if(!_loop){
                 _audioPlaybackStarted = false;
@@ -436,7 +439,7 @@ package com.videojs.providers{
                 }
             }
         }
-		
+        
         private function onSoundLoadError(e:IOErrorEvent):void{
             _loadErrored = true;
             _model.broadcastErrorEventExternally(ExternalErrorEventName.SRC_404);
