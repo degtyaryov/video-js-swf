@@ -1,7 +1,7 @@
 package com.videojs{
     
     import flash.display.Sprite;
-    
+	
     public class VideoJSApp extends Sprite{
         
         private var _uiView:VideoJSView;

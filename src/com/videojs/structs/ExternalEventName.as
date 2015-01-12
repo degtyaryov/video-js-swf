@@ -9,7 +9,6 @@ package com.videojs.structs{
         public static const ON_RESUME:String = "play";
         public static const ON_SEEK_START:String = "seeking";
         public static const ON_SEEK_COMPLETE:String = "seeked";
-        public static const ON_SEEK_NOT_SUPPORT:String = "seeking_not_support";
         public static const ON_BUFFER_FULL:String = "loadeddata";
         public static const ON_BUFFER_EMPTY:String = "waiting";
         public static const ON_BUFFER_FLUSH:String = "emptied";
